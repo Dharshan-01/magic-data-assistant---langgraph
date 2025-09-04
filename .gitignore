@@ -1,5 +1,19 @@
+env/
 # Ignore Python cache and reg files
 __pycache__/
+__pycache__/**
 *.pyc
 *.pyo
 *.pyd
+
+# Ignore all env folders (top-level and nested)
+env/
+env/**
+.env/
+.env/**
+.venv/
+.venv/**
+
+# Ignore any __pycache__ anywhere
+**/__pycache__/
+**/__pycache__/**
