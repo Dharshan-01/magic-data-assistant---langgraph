@@ -1,0 +1,5 @@
+# Ignore Python cache and reg files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

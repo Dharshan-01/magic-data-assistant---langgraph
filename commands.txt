@@ -1,2 +1,4 @@
-to load or reload the server - uvicorn main:app --reload
+cd magic-data-assistant---langgraph
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
 page in browser - http://127.0.0.1:8000

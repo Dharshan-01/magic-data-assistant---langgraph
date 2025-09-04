@@ -1,0 +1,11 @@
+pandas
+psycopg
+python-dotenv
+fastapi
+uvicorn[standard]
+psycopg[binary]
+python-multipart
+typing-extensions
+langgraph
+langchain
+langchain-openai

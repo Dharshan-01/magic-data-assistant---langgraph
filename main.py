@@ -267,4 +267,3 @@ def add_row(table_name: str, row_data: Dict[Any, Any]):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
     finally:
         if conn: conn.close()
-
