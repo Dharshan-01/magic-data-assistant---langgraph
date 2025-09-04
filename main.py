@@ -128,7 +128,7 @@ graph = workflow.compile()
 
 # Initialize the LLM with our tool, pointing to OpenRouter
 llm = ChatOpenAI(
-    model="mistralai/mistral-7b-instruct:free", 
+    model="deepseek/deepseek-chat-v3.1:free", 
     openai_api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1",
     default_headers={
@@ -267,3 +267,4 @@ def add_row(table_name: str, row_data: Dict[Any, Any]):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
     finally:
         if conn: conn.close()
+
