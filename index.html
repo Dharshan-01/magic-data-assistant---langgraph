@@ -19,12 +19,22 @@
         #chat-messages::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
         #chat-messages::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         #chat-messages::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .code-block {
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body class="bg-slate-100">
 
     <div class="flex h-screen">
-        <!-- Left Sidebar for Uploading and Table List -->
         <aside class="w-1/3 max-w-sm bg-white p-6 border-r border-slate-200 flex flex-col">
             <div class="flex items-center gap-3 mb-6">
                 <div class="bg-indigo-600 p-2 rounded-lg">
@@ -38,7 +48,6 @@
                     Choose File(s)
                     <span id="file-name-display" class="block text-xs text-slate-500 mt-1">No file chosen</span>
                 </label>
-                <!-- FIX: Updated to accept .xlsx and changed id -->
                 <input type="file" id="file-input" accept=".csv,.xlsx" class="hidden" multiple>
                 <button id="upload-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-slate-400 flex items-center justify-center gap-2">
                     <svg id="upload-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
@@ -53,16 +62,14 @@
 
             <h2 class="text-lg font-semibold text-slate-700 mt-8 mb-4">Active Tables</h2>
             <div id="active-tables-list" class="flex-grow overflow-y-auto space-y-2">
-                <!-- Active tables will be listed here -->
-            </div>
+                </div>
         </aside>
 
-        <!-- Main Chat Area -->
         <main class="w-2/3 flex flex-col bg-slate-50">
             <div id="chat-messages" class="flex-grow p-6 overflow-y-auto space-y-6">
                 <div class="chat-message">
                     <div class="bg-white rounded-lg p-4 max-w-xl shadow-sm">
-                        <p class="font-medium text-slate-800">Hello!</p>
+                        <p class="font-medium text-slate-800">Hello! 👋</p>
                         <p class="text-slate-600">Please upload a CSV or multi-sheet Excel file to begin.</p>
                     </div>
                 </div>
@@ -80,7 +87,7 @@
     </div>
 
     <script>
-        const fileInput = document.getElementById('file-input'); // FIX: Updated ID
+        const fileInput = document.getElementById('file-input');
         const fileNameDisplay = document.getElementById('file-name-display');
         const uploadButton = document.getElementById('upload-button');
         const uploadButtonText = document.getElementById('upload-button-text');
@@ -110,14 +117,12 @@
             
             toggleLoading(true);
 
-            // Process one file at a time from the selection
             const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
             
             try {
                 showStatus(`Processing ${file.name}...`, 'blue');
-                // FIX: Point to the new /upload-file/ endpoint
                 const response = await fetch('/upload-file/', { method: 'POST', body: formData });
                 const result = await response.json();
 
@@ -126,7 +131,6 @@
                 }
                 
                 showStatus(result.message, 'green');
-                // FIX: Handle the array of created tables from the backend
                 result.created_tables.forEach(name => activeTableNames.add(name));
 
             } catch (error) {
@@ -173,21 +177,28 @@
             });
         }
         
-        function addChatMessage(message, sender = 'user') {
+        function addChatMessage(content, sender = 'user', isHtml = false) {
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `chat-message flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
             
-            let content = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-            messageWrapper.innerHTML = `
-                <div class="max-w-xl rounded-lg p-4 shadow-sm ${sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-800'}">
-                    <p>${content}</p>
-                </div>
-            `;
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `max-w-xl rounded-lg p-4 shadow-sm ${sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-800'}`;
+            
+            if (isHtml) {
+                messageBubble.innerHTML = content;
+            } else {
+                const p = document.createElement('p');
+                p.textContent = content;
+                messageBubble.appendChild(p);
+            }
+            
+            messageWrapper.appendChild(messageBubble);
             chatMessages.appendChild(messageWrapper);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageBubble;
         }
 
+        // --- NEW: MODIFIED FUNCTION TO HANDLE STREAMING RESPONSE WITH "SHOW THINKING" DROPDOWN ---
         async function handleSendMessage() {
             const userMessage = chatInput.value.trim();
             if (!userMessage || activeTableNames.size === 0) return;
@@ -198,21 +209,18 @@
             chatInput.disabled = true;
             sendButton.disabled = true;
 
-            const thinkingMessage = document.createElement('div');
-            thinkingMessage.className = 'chat-message flex justify-start';
-            thinkingMessage.innerHTML = `
-                <div class="max-w-xl rounded-lg p-4 shadow-sm bg-white text-slate-800">
-                    <p class="flex items-center gap-2 text-slate-500">
-                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Thinking...
-                    </p>
-                </div>
-            `;
-            chatMessages.appendChild(thinkingMessage);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // --- NEW: Variable to store tool call info ---
+            let toolCallInfo = null;
+
+            // Create a placeholder for the assistant's response
+            const assistantMessageBubble = addChatMessage(`
+                <p class="flex items-center gap-2 text-slate-500">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Thinking...
+                </p>`, 'assistant', true);
 
             try {
                 const response = await fetch('/chat/', {
@@ -224,19 +232,74 @@
                     }),
                 });
 
-                chatMessages.removeChild(thinkingMessage);
-                
                 if (!response.ok) {
                     const errorResult = await response.json();
                     throw new Error(errorResult.detail || 'An unknown backend error occurred.');
                 }
                 
-                const result = await response.json();
-                addChatMessage(result.answer, 'assistant');
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); 
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const jsonData = line.substring(6);
+                            const eventData = JSON.parse(jsonData);
+                            
+                            if (eventData.event === 'on_tool_start') {
+                                // --- NEW: Capture the tool call data ---
+                                toolCallInfo = eventData.data;
+                                const toolInput = eventData.data.tool_input;
+                                assistantMessageBubble.innerHTML = `
+                                    <p class="flex items-center gap-2 text-slate-500 text-sm">
+                                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Running Query...
+                                    </p>
+                                    <div class="code-block mt-2">${toolInput.sql_query.replace(/</g, "&lt;")}</div>
+                                `;
+                            } else if (eventData.event === 'on_tool_end') {
+                                assistantMessageBubble.innerHTML = `
+                                    <p class="flex items-center gap-2 text-slate-500 text-sm">
+                                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Analyzing results...
+                                    </p>
+                                `;
+                            } else if (eventData.event === 'on_chat_model_end') {
+                                // --- NEW: Render the final answer with the collapsible tool call info ---
+                                let finalHtml = `<p>${eventData.data.text.replace(/</g, "&lt;")}</p>`;
+                                
+                                if (toolCallInfo) {
+                                    const sqlQuery = toolCallInfo.tool_input.sql_query.replace(/</g, "&lt;");
+                                    finalHtml += `
+                                        <div class="mt-4 border-t border-slate-200 pt-2">
+                                            <button class="toggle-details-button text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                                                Show thinking
+                                                <svg class="chevron w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </button>
+                                            <div class="details-panel hidden mt-2">
+                                                <p class="text-xs font-bold text-slate-600">TOOL CALLED: ${toolCallInfo.tool}</p>
+                                                <div class="code-block mt-1">${sqlQuery}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                assistantMessageBubble.innerHTML = finalHtml;
+                            } 
+                        }
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
 
             } catch (error) {
-                chatMessages.removeChild(thinkingMessage);
-                addChatMessage(`Error: ${error.message}`, 'assistant');
+                assistantMessageBubble.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
             } finally {
                 chatInput.disabled = false;
                 sendButton.disabled = false;
@@ -249,7 +312,26 @@
             if (e.key === 'Enter') handleSendMessage();
         });
 
+        // Event listener for all "Show thinking" buttons
+        chatMessages.addEventListener('click', function(event) {
+            const target = event.target.closest('.toggle-details-button');
+
+            if (target) {
+                const detailsPanel = target.nextElementSibling;
+                const chevron = target.querySelector('.chevron');
+
+                const isHidden = detailsPanel.classList.toggle('hidden');
+                
+                if (isHidden) {
+                    target.childNodes[0].nodeValue = "Show thinking ";
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    target.childNodes[0].nodeValue = "Hide thinking ";
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
-

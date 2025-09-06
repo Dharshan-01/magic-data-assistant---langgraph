@@ -4,11 +4,12 @@ import os
 import io
 import re
 import json
+import asyncio # Added for asynchronous operations
 import pandas as pd
 import psycopg
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse # Added StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, List, Dict
 from pydantic import BaseModel, Field
@@ -49,7 +50,7 @@ class ChatRequest(BaseModel):
     table_names: List[str]
     question: str
 
-# --- Helper Functions ---
+# --- Helper Functions (Unchanged) ---
 def pandas_to_sql_type(dtype):
     if "int" in dtype.name: return "BIGINT"
     elif "float" in dtype.name: return "FLOAT"
@@ -67,28 +68,29 @@ def process_dataframe_to_db(df: pd.DataFrame, table_name: str, db_url: str):
             )
             cur.execute(create_query)
             
-            # Use StringIO for efficient in-memory CSV handling for the COPY command
             output = io.StringIO()
-            df.to_csv(output, sep='\t', header=False, index=False, na_rep='\\N') # Handle NULLs correctly
+            df.to_csv(output, sep='\t', header=False, index=False, na_rep='\\N')
             output.seek(0)
             column_names_for_copy = ", ".join([f'"{col}"' for col in df.columns])
             with cur.copy(f'COPY "{table_name}" ({column_names_for_copy}) FROM STDIN') as copy:
-                while data := output.read(8192): # Read in chunks
+                while data := output.read(8192):
                     copy.write(data)
 
 # --- LangGraph Agent Implementation (Unchanged) ---
 class AgentState(TypedDict):
     messages: List[BaseMessage]
     db_url: str
-# ... (rest of the LangGraph implementation is the same) ...
+
 @tool
 def run_sql_query(sql_query: str = Field(description="The PostgreSQL query to be executed.")):
     """A tool to execute a SQL query against the database."""
     pass 
+
 def agent_node(state: AgentState):
     print("---CALLING AGENT---")
     response = llm_with_tools.invoke(state["messages"])
     return {"messages": state["messages"] + [response]}
+
 def tool_node(state: AgentState):
     print("---EXECUTING TOOL---")
     last_message = state["messages"][-1]
@@ -109,16 +111,20 @@ def tool_node(state: AgentState):
                 else:
                     rows_affected = cur.rowcount
                     tool_result = f"Query executed successfully. {rows_affected} rows were affected."
-        return {"messages": [ToolMessage(content=tool_result, tool_call_id=tool_calls[0]["id"])]}
+        # Append the new ToolMessage to the existing messages list
+        return {"messages": state["messages"] + [ToolMessage(content=tool_result, tool_call_id=tool_calls[0]["id"])]}
     except Exception as e:
         error_message = f"Error executing SQL: {e}"
-        return {"messages": [ToolMessage(content=error_message, tool_call_id=tool_calls[0]["id"])]}
+        # Also append the error message to the history
+        return {"messages": state["messages"] + [ToolMessage(content=error_message, tool_call_id=tool_calls[0]["id"])]}
+
 def should_continue(state: AgentState):
     last_message = state["messages"][-1]
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
         return "continue"
     else:
         return "end"
+
 workflow = StateGraph(AgentState)
 workflow.add_node("agent", agent_node)
 workflow.add_node("action", tool_node)
@@ -129,6 +135,55 @@ graph = workflow.compile()
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
 llm_with_tools = llm.bind_tools([run_sql_query])
 
+# --- NEW: Asynchronous Streaming Generator ---
+async def stream_graph_events(prompt: str, db_url: str):
+    """
+    An async generator that streams events from the LangGraph execution.
+    Yields Server-Sent Events (SSE) formatted strings.
+    """
+    initial_state = {"messages": [HumanMessage(content=prompt)], "db_url": db_url}
+
+    # Use graph.astream() for asynchronous streaming
+    async for s in graph.astream(initial_state):
+        # The key of the dictionary 's' tells you which node just ran
+        if "agent" in s:
+            node_output = s["agent"]
+            last_message = node_output["messages"][-1]
+            if last_message.tool_calls:
+                # Event: The agent decided to call a tool
+                tool_call = last_message.tool_calls[0]
+                payload = {
+                    "event": "on_tool_start",
+                    "data": {
+                        "tool": tool_call["name"],
+                        "tool_input": tool_call["args"]
+                    }
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+            else:
+                # Event: The agent produced the final text response
+                payload = {
+                    "event": "on_chat_model_end",
+                    "data": {"text": last_message.content}
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+
+        elif "action" in s:
+            # Event: The tool has finished executing
+            node_output = s["action"]
+            tool_output = node_output["messages"][0].content
+            payload = {
+                "event": "on_tool_end",
+                "data": {"output": tool_output}
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+        
+        # Add a small delay to allow the client to process the event
+        await asyncio.sleep(0.01)
+
+    # Signal the end of the stream
+    payload = {"event": "end"}
+    yield f"data: {json.dumps(payload)}\n\n"
 
 # --- API Endpoints ---
 
@@ -136,6 +191,7 @@ llm_with_tools = llm.bind_tools([run_sql_query])
 async def read_root():
     return FileResponse('index.html')
 
+# --- MODIFIED /chat/ endpoint for Streaming ---
 @app.post("/chat/")
 async def chat_with_data(request: ChatRequest):
     if not GOOGLE_API_KEY:
@@ -144,6 +200,7 @@ async def chat_with_data(request: ChatRequest):
         db_url = os.getenv("NEON_CONNECTION_STRING")
         if not db_url:
             raise ValueError("NEON_CONNECTION_STRING not found in .env file")
+
         all_schemas = []
         with psycopg.connect(db_url) as conn:
             with conn.cursor() as cur:
@@ -154,8 +211,10 @@ async def chat_with_data(request: ChatRequest):
                     if schema_rows:
                         schema_str = f"Table '{table_name}': " + ", ".join([f'"{col[0]}" ({col[1]})' for col in schema_rows])
                         all_schemas.append(schema_str)
+
         if not all_schemas:
             raise HTTPException(status_code=404, detail="No valid tables found.")
+
         combined_schema = "\n".join(all_schemas)
         prompt = f"""
         You are a powerful data analyst agent. Your process is to first use the `run_sql_query` tool to get information, and then to summarize the result for the user.
@@ -170,17 +229,15 @@ async def chat_with_data(request: ChatRequest):
         **CRITICAL FINAL INSTRUCTION:** Your final message must ONLY be the natural language answer. Do not include your internal monologue, the SQL query, or raw tool results. Just the final, clean answer.
         **CRITICAL RULE:** You MUST enclose all table and column names in double quotes (e.g., "Weekly_Sales").
         """
-        initial_state = {"messages": [HumanMessage(content=prompt)],"db_url": db_url}
-        final_state = None
-        for s in graph.stream(initial_state):
-            print(s)
-            final_state = s
-        final_answer = final_state['agent']["messages"][-1].content
-        return {"answer": final_answer}
+
+        # Return the StreamingResponse, which calls the async generator
+        return StreamingResponse(stream_graph_events(prompt, db_url), media_type="text/event-stream")
+
     except Exception as e:
+        print(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
-# --- UPGRADED /upload-file/ endpoint ---
+# --- UPGRADED /upload-file/ endpoint (Unchanged) ---
 @app.post("/upload-file/")
 async def upload_file(file: UploadFile = File(...)):
     """Handles both CSV and Excel file uploads."""
@@ -201,7 +258,6 @@ async def upload_file(file: UploadFile = File(...)):
             created_tables.append(table_name)
 
         elif file_extension == '.xlsx':
-            # Read all sheets from the Excel file
             all_sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None)
             for sheet_name, df in all_sheets.items():
                 table_name = re.sub(r'[^a-zA-Z0-9_]', '_', sheet_name).lower()
@@ -217,4 +273,3 @@ async def upload_file(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {e}")
-
