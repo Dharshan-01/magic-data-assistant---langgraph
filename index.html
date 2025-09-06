@@ -3,220 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Data Assistant</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Data Assistant V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .chat-message {
-            animation: fadeIn 0.5s ease-in-out;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .chat-message { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Custom scrollbar for a cleaner look */
-        #chat-messages::-webkit-scrollbar {
-            width: 8px;
-        }
-        #chat-messages::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        #chat-messages::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        #chat-messages::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        #chat-messages::-webkit-scrollbar { width: 8px; }
+        #chat-messages::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        #chat-messages::-webkit-scrollbar-thumb:hover { background: #64748b; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
+<body class="bg-slate-100">
 
-    <div class="w-full max-w-2xl mx-auto">
-        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            
-            <header class="bg-gray-800 text-white p-6 text-center">
-                <div class="flex justify-center items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
+    <div class="flex h-screen">
+        <!-- Left Sidebar for Uploading and Table List -->
+        <aside class="w-1/3 max-w-sm bg-white p-6 border-r border-slate-200 flex flex-col">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
-                <h1 class="text-3xl font-bold">Magic Data Assistant</h1>
-                <p class="text-sm text-gray-300 mt-1">Upload a CSV and ask questions in plain English.</p>
-            </header>
+                <h1 class="text-xl font-bold text-slate-800">Data Assistant V2</h1>
+            </div>
 
-            <main class="p-6 md:p-8">
-                <!-- Step 1: Upload Section -->
-                <section id="upload-section">
-                    <h2 class="text-xl font-semibold mb-4 border-b pb-2 text-center">Step 1: Upload Your Data</h2>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-4">
-                        <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-gray-500
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-violet-50 file:text-violet-700
-                            hover:file:bg-violet-100 cursor-pointer"
-                        />
-                        <button id="upload-button" class="mt-4 bg-violet-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-violet-700 transition-colors disabled:bg-gray-400 relative">
-                            <span id="upload-button-text">Upload & Process</span>
-                            <div id="upload-spinner" class="hidden absolute inset-0 items-center justify-center">
-                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            </div>
-                        </button>
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
+                <label for="file-input" class="cursor-pointer text-sm font-medium text-slate-600 hover:text-indigo-600">
+                    Choose File(s)
+                    <span id="file-name-display" class="block text-xs text-slate-500 mt-1">No file chosen</span>
+                </label>
+                <!-- FIX: Updated to accept .xlsx and changed id -->
+                <input type="file" id="file-input" accept=".csv,.xlsx" class="hidden" multiple>
+                <button id="upload-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-slate-400 flex items-center justify-center gap-2">
+                    <svg id="upload-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    <svg id="loading-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="upload-button-text">Upload & Process</span>
+                </button>
+            </div>
+            <div id="upload-status" class="mt-2 text-center text-xs font-medium"></div>
+
+            <h2 class="text-lg font-semibold text-slate-700 mt-8 mb-4">Active Tables</h2>
+            <div id="active-tables-list" class="flex-grow overflow-y-auto space-y-2">
+                <!-- Active tables will be listed here -->
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="w-2/3 flex flex-col bg-slate-50">
+            <div id="chat-messages" class="flex-grow p-6 overflow-y-auto space-y-6">
+                <div class="chat-message">
+                    <div class="bg-white rounded-lg p-4 max-w-xl shadow-sm">
+                        <p class="font-medium text-slate-800">Hello!</p>
+                        <p class="text-slate-600">Please upload a CSV or multi-sheet Excel file to begin.</p>
                     </div>
-                    <div id="upload-status" class="mt-4 text-center text-sm font-medium"></div>
-                </section>
+                </div>
+            </div>
 
-                <!-- Step 2: Chat Section -->
-                <section id="chat-section" class="hidden">
-                    <h2 class="text-xl font-semibold mb-4 border-b pb-2 text-center">Step 2: Chat with Your Data</h2>
-                    
-                    <div id="chat-messages" class="h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg border mb-4 space-y-4">
-                        <div class="chat-message">
-                            <p class="bg-violet-100 text-violet-800 rounded-lg p-3 max-w-md inline-block">
-                                Hello! Your data has been uploaded. I'm ready to answer your questions.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <input type="text" id="chat-input" placeholder="e.g., What were the total sales last week?" class="flex-grow border-gray-300 rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500 transition">
-                        <button id="send-button" class="bg-violet-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-violet-700 transition-colors disabled:bg-gray-400">
-                            Send
-                        </button>
-                    </div>
-                </section>
-
-            </main>
-        </div>
-        <footer class="text-center text-xs text-gray-400 mt-6">
-            <p>Powered by FastAPI, LangGraph & Neon DB</p>
-        </footer>
+            <div class="p-6 bg-white border-t border-slate-200">
+                <div class="flex items-center gap-4">
+                    <input type="text" id="chat-input" placeholder="e.g., Which city had the highest sales?" class="w-full border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition" disabled>
+                    <button id="send-button" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-slate-400">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script>
-        const uploadSection = document.getElementById('upload-section');
-        const chatSection = document.getElementById('chat-section');
-        const fileInput = document.getElementById('csv-file-input');
+        const fileInput = document.getElementById('file-input'); // FIX: Updated ID
+        const fileNameDisplay = document.getElementById('file-name-display');
         const uploadButton = document.getElementById('upload-button');
         const uploadButtonText = document.getElementById('upload-button-text');
-        const uploadSpinner = document.getElementById('upload-spinner');
+        const uploadIcon = document.getElementById('upload-icon');
+        const loadingSpinner = document.getElementById('loading-spinner');
         const uploadStatus = document.getElementById('upload-status');
+        const activeTablesList = document.getElementById('active-tables-list');
         const chatMessages = document.getElementById('chat-messages');
         const chatInput = document.getElementById('chat-input');
         const sendButton = document.getElementById('send-button');
 
-        let currentTableName = null;
+        let activeTableNames = new Set();
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = `${fileInput.files.length} file(s) chosen`;
+            } else {
+                fileNameDisplay.textContent = 'No file chosen';
+            }
+        });
 
         uploadButton.addEventListener('click', async () => {
-            const file = fileInput.files[0];
-            if (!file) {
-                uploadStatus.textContent = 'Please select a file first.';
-                uploadStatus.className = 'mt-4 text-center text-sm font-medium text-red-600';
+            if (fileInput.files.length === 0) {
+                showStatus('Please select one or more files first.', 'red');
                 return;
             }
+            
+            toggleLoading(true);
+
+            // Process one file at a time from the selection
+            const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
             
-            uploadStatus.textContent = 'Uploading and processing...';
-            uploadStatus.className = 'mt-4 text-center text-sm font-medium text-blue-600';
-            uploadButton.disabled = true;
-            uploadButtonText.classList.add('invisible');
-            uploadSpinner.classList.remove('hidden');
-            uploadSpinner.classList.add('flex');
-
             try {
-                const response = await fetch('/upload-csv/', { method: 'POST', body: formData });
+                showStatus(`Processing ${file.name}...`, 'blue');
+                // FIX: Point to the new /upload-file/ endpoint
+                const response = await fetch('/upload-file/', { method: 'POST', body: formData });
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
+
+                if (!response.ok) {
+                    throw new Error(result.detail || 'An unknown error occurred.');
+                }
                 
-                uploadStatus.textContent = result.message;
-                uploadStatus.className = 'mt-4 text-center text-sm font-medium text-green-600';
-                currentTableName = result.database_table_created;
-                
-                setTimeout(() => {
-                    uploadSection.classList.add('hidden');
-                    chatSection.classList.remove('hidden');
-                }, 1000); // Wait a second before switching view
+                showStatus(result.message, 'green');
+                // FIX: Handle the array of created tables from the backend
+                result.created_tables.forEach(name => activeTableNames.add(name));
 
             } catch (error) {
-                uploadStatus.textContent = `Error: ${error.message}`;
-                uploadStatus.className = 'mt-4 text-center text-sm font-medium text-red-600';
-            } finally {
-                uploadButton.disabled = false;
-                uploadButtonText.classList.remove('invisible');
-                uploadSpinner.classList.add('hidden');
-                uploadSpinner.classList.remove('flex');
+                showStatus(`Error processing ${file.name}: ${error.message}`, 'red');
             }
-        });
-        
-        function addChatMessage(message, sender = 'user') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message';
-            
-            // Sanitize message to prevent HTML injection
-            const sanitizedMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            if (sender === 'user') {
-                messageDiv.classList.add('text-right');
-                messageDiv.innerHTML = `<p class="bg-blue-500 text-white rounded-lg p-3 max-w-md inline-block">${sanitizedMessage}</p>`;
-            } else { // 'assistant' or 'thinking'
-                let bgColor = sender === 'thinking' ? 'bg-gray-200 text-gray-600' : 'bg-violet-100 text-violet-800';
-                messageDiv.innerHTML = `<p class="${bgColor} rounded-lg p-3 max-w-xl inline-block">${sanitizedMessage}</p>`;
+            updateActiveTablesList();
+            fileInput.value = ''; 
+            fileNameDisplay.textContent = 'No file chosen';
+            toggleLoading(false);
+        });
+
+        function toggleLoading(isLoading) {
+            uploadButton.disabled = isLoading;
+            chatInput.disabled = isLoading || activeTableNames.size === 0;
+            sendButton.disabled = isLoading || activeTableNames.size === 0;
+            if (isLoading) {
+                uploadButtonText.textContent = 'Processing...';
+                uploadIcon.classList.add('hidden');
+                loadingSpinner.classList.remove('hidden');
+            } else {
+                uploadButtonText.textContent = 'Upload & Process';
+                uploadIcon.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
             }
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showStatus(message, color) {
+            uploadStatus.textContent = message;
+            uploadStatus.className = `mt-2 text-center text-xs font-medium text-${color}-600`;
+        }
+
+        function updateActiveTablesList() {
+            activeTablesList.innerHTML = '';
+            if (activeTableNames.size > 0) {
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+            }
+            activeTableNames.forEach(name => {
+                const tableDiv = document.createElement('div');
+                tableDiv.className = 'bg-slate-100 text-slate-700 text-sm font-medium p-2 rounded-md';
+                tableDiv.textContent = name;
+                activeTablesList.appendChild(tableDiv);
+            });
         }
         
+        function addChatMessage(message, sender = 'user') {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `chat-message flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            let content = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            messageWrapper.innerHTML = `
+                <div class="max-w-xl rounded-lg p-4 shadow-sm ${sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-800'}">
+                    <p>${content}</p>
+                </div>
+            `;
+            chatMessages.appendChild(messageWrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
         async function handleSendMessage() {
             const userMessage = chatInput.value.trim();
-            if (!userMessage || !currentTableName) return;
+            if (!userMessage || activeTableNames.size === 0) return;
 
             addChatMessage(userMessage, 'user');
             chatInput.value = '';
             
-            sendButton.disabled = true;
             chatInput.disabled = true;
-            addChatMessage("Thinking...", 'thinking');
+            sendButton.disabled = true;
+
+            const thinkingMessage = document.createElement('div');
+            thinkingMessage.className = 'chat-message flex justify-start';
+            thinkingMessage.innerHTML = `
+                <div class="max-w-xl rounded-lg p-4 shadow-sm bg-white text-slate-800">
+                    <p class="flex items-center gap-2 text-slate-500">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Thinking...
+                    </p>
+                </div>
+            `;
+            chatMessages.appendChild(thinkingMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
 
             try {
                 const response = await fetch('/chat/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ table_name: currentTableName, question: userMessage }),
+                    body: JSON.stringify({
+                        table_names: Array.from(activeTableNames),
+                        question: userMessage
+                    }),
                 });
-                
-                // Remove "Thinking..." message
-                chatMessages.removeChild(chatMessages.lastChild);
 
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.detail || 'An error occurred with the AI model.');
+                chatMessages.removeChild(thinkingMessage);
                 
-                // The backend now only sends the final friendly answer
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.detail || 'An unknown backend error occurred.');
+                }
+                
+                const result = await response.json();
                 addChatMessage(result.answer, 'assistant');
 
             } catch (error) {
-                // Remove "Thinking..." message
-                if (chatMessages.lastChild && chatMessages.lastChild.textContent === "Thinking...") {
-                    chatMessages.removeChild(chatMessages.lastChild);
-                }
+                chatMessages.removeChild(thinkingMessage);
                 addChatMessage(`Error: ${error.message}`, 'assistant');
             } finally {
-                sendButton.disabled = false;
                 chatInput.disabled = false;
+                sendButton.disabled = false;
                 chatInput.focus();
             }
         }
 
         sendButton.addEventListener('click', handleSendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSendMessage();
+        });
+
     </script>
 </body>
 </html>
