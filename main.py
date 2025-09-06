@@ -126,7 +126,7 @@ workflow.set_entry_point("agent")
 workflow.add_conditional_edges("agent", should_continue, {"continue": "action", "end": END})
 workflow.add_edge("action", "agent") 
 graph = workflow.compile()
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=GOOGLE_API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
 llm_with_tools = llm.bind_tools([run_sql_query])
 
 

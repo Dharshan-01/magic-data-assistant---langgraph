@@ -10,3 +10,4 @@ langchain-openai
 openpyxl
 pydantic
 typing_extensions
+langchain-google-genai
