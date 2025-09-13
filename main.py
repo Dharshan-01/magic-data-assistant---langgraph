@@ -191,7 +191,7 @@ async def stream_graph_events(prompt: str, db_url: str):
 async def read_root():
     return FileResponse('index.html')
 
-# --- MODIFIED /chat/ endpoint for Streaming ---
+# --- MODIFIED /chat/ endpoint for SINGLE JSON RESPONSE ---
 @app.post("/chat/")
 async def chat_with_data(request: ChatRequest):
     if not GOOGLE_API_KEY:
@@ -230,8 +230,12 @@ async def chat_with_data(request: ChatRequest):
         **CRITICAL RULE:** You MUST enclose all table and column names in double quotes (e.g., "Weekly_Sales").
         """
 
-        # Return the StreamingResponse, which calls the async generator
-        return StreamingResponse(stream_graph_events(prompt, db_url), media_type="text/event-stream")
+        # --- KEY CHANGE: Use graph.invoke() for a single response ---
+        initial_state = {"messages": [HumanMessage(content=prompt)], "db_url": db_url}
+        result = await asyncio.to_thread(graph.invoke, initial_state)
+        # The agent's final message is the last in the messages list
+        final_message = result["messages"][-1]
+        return {"answer": final_message.content}
 
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
